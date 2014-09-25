@@ -42,21 +42,14 @@ namespace FlowFields
         Vector2[,] Gradient;
         Line[,] Lines;
 
-        double[,] horizontalKernel = new double[,] { { +3, +10, +3 }, { 0, 0, 0 }, { -3, -10, -3 } };
-        double[,] verticalKernel = new double[,] { { +3, 0, -3 }, { +10, 0, -10 }, { +3, 0, -3 } };
+        double TotalWater = 0;
 
-        int[] xDexer = new int[] { -1, 0, 1 };
-        int[] yDexer = new int[] { -1, 0, 1 };
-
-        int counter = 0;
-        double totalWater = 0;
-
-        Vector2 localGradient;
-        double localFreeWater;
-        Vector2 localTotalDisplacement;
-        Point localDisplacementPoint;
-        Vector2 localOffset;
-        double[,] localTemp;
+        Vector2 LocalGradient;
+        double LocalFreeWater;
+        Vector2 LocalTotalDisplacement;
+        Point LocalDisplacementPoint;
+        Vector2 LocalOffset;
+        double[,] LocalTemp;
 
         double LocalXGrad;
         double LocalYGrad;
@@ -143,37 +136,37 @@ namespace FlowFields
             for (int y = 1; y < Height - 1; y++)
                 for (int x = 1; x < Width - 1; x++)
                 {
-                    localGradient = Gradient[x, y];
+                    LocalGradient = Gradient[x, y];
 
-                    localFreeWater = ComputeFreeWater(y, x);
+                    LocalFreeWater = ComputeFreeWater(y, x);
 
                     if (CurrentWater.Data[x, y] > 0)
                     {
-                        localTotalDisplacement = new Vector2(x + localGradient.X, y + localGradient.Y);
-                        localDisplacementPoint.X = (int)Math.Floor(localTotalDisplacement.X);
-                        localDisplacementPoint.Y = (int)Math.Floor(localTotalDisplacement.Y);
-                        localOffset.X = localTotalDisplacement.X - localDisplacementPoint.X;
-                        localOffset.Y = localTotalDisplacement.Y - localDisplacementPoint.Y;
+                        LocalTotalDisplacement = new Vector2(x + LocalGradient.X, y + LocalGradient.Y);
+                        LocalDisplacementPoint.X = (int)Math.Floor(LocalTotalDisplacement.X);
+                        LocalDisplacementPoint.Y = (int)Math.Floor(LocalTotalDisplacement.Y);
+                        LocalOffset.X = LocalTotalDisplacement.X - LocalDisplacementPoint.X;
+                        LocalOffset.Y = LocalTotalDisplacement.Y - LocalDisplacementPoint.Y;
 
-                        NextWater.Data[x, y] += CurrentWater.Data[x, y] - localFreeWater / FlowFraction;
+                        NextWater.Data[x, y] += CurrentWater.Data[x, y] - LocalFreeWater / FlowFraction;
 
-                        if (localDisplacementPoint.X > 1 && localDisplacementPoint.X < Width - 1 && localDisplacementPoint.Y > 1 && localDisplacementPoint.Y < Height - 1)
+                        if (LocalDisplacementPoint.X > 1 && LocalDisplacementPoint.X < Width - 1 && LocalDisplacementPoint.Y > 1 && LocalDisplacementPoint.Y < Height - 1)
                         {
-                            NextWater.Data[localDisplacementPoint.X, localDisplacementPoint.Y] += (1.0 - localOffset.X) * (1.0 - localOffset.Y) * localFreeWater * FlowFraction;
-                            NextWater.Data[localDisplacementPoint.X + 1, localDisplacementPoint.Y] += localOffset.X * (1.0 - localOffset.Y) * localFreeWater * FlowFraction;
-                            NextWater.Data[localDisplacementPoint.X, localDisplacementPoint.Y + 1] += (1.0 - localOffset.X) * localOffset.Y * localFreeWater * FlowFraction;
-                            NextWater.Data[localDisplacementPoint.X + 1, localDisplacementPoint.Y + 1] += localOffset.X * localOffset.Y * localFreeWater * FlowFraction;
+                            NextWater.Data[LocalDisplacementPoint.X, LocalDisplacementPoint.Y] += (1.0 - LocalOffset.X) * (1.0 - LocalOffset.Y) * LocalFreeWater * FlowFraction;
+                            NextWater.Data[LocalDisplacementPoint.X + 1, LocalDisplacementPoint.Y] += LocalOffset.X * (1.0 - LocalOffset.Y) * LocalFreeWater * FlowFraction;
+                            NextWater.Data[LocalDisplacementPoint.X, LocalDisplacementPoint.Y + 1] += (1.0 - LocalOffset.X) * LocalOffset.Y * LocalFreeWater * FlowFraction;
+                            NextWater.Data[LocalDisplacementPoint.X + 1, LocalDisplacementPoint.Y + 1] += LocalOffset.X * LocalOffset.Y * LocalFreeWater * FlowFraction;
                         }
                         else
-                            NextWater.Data[x, y] = localFreeWater * (1.0 - FlowFraction);
+                            NextWater.Data[x, y] = LocalFreeWater * (1.0 - FlowFraction);
 
                         DeltaWater[x, y] = NextWater.Data[x, y] - CurrentWater.Data[x, y];
                     }
                 }
 
-            localTemp = CurrentWater.Data;
+            LocalTemp = CurrentWater.Data;
             CurrentWater.Data = NextWater.Data;
-            NextWater.Data = localTemp;
+            NextWater.Data = LocalTemp;
 
             base.Update(gameTime);
         }
@@ -187,9 +180,14 @@ namespace FlowFields
 
         private void ResetWater()
         {
+            TotalWater = 0;
+
             for (int y = 0; y < Height; y++)
                 for (int x = 0; x < Width; x++)
+                {
                     NextWater.Data[x, y] = 0;
+                    TotalWater += CurrentWater.Data[x, y];
+                }
         }
 
         private void ComputeGradient()
@@ -296,7 +294,7 @@ namespace FlowFields
                     for (int x = 0; x < Width; x++)
                         if (CurrentWater.Data[x, y] > 0.00001)
                         {
-                            float c = (float)CurrentWater.Data[x, y] + 0.5f;
+                            float c = (float)CurrentWater.Data[x, y] + 0.2f;
                             Batch.Draw(Tile, new Vector2(x, y) * Scale, null, new Color(0, 0, c, c), 0, Vector2.Zero, Scale, SpriteEffects.None, 0);
                         }
 
@@ -308,12 +306,12 @@ namespace FlowFields
 
             if (mv.X > 0 && mv.X < Width && mv.Y > 0 && mv.Y < Height)
             {
-                Batch.DrawString(Font, "Total Altitude " + TotalAltitude.Data[ms.X / (int)Scale, ms.Y / (int)Scale], new Vector2(0, 0), Color.White);
-                Batch.DrawString(Font, "Water " + CurrentWater.Data[ms.X / (int)Scale, ms.Y / (int)Scale], new Vector2(0, 20), Color.White);
-                Batch.DrawString(Font, "Gradient " + Gradient[ms.X / (int)Scale, ms.Y / (int)Scale], new Vector2(0, 40), Color.White);
+                Batch.DrawString(Font, "Total Altitude " + TotalAltitude.Data[ms.X / (int)Scale, ms.Y / (int)Scale], new Vector2(0, 0), Color.Red);
+                Batch.DrawString(Font, "Water " + CurrentWater.Data[ms.X / (int)Scale, ms.Y / (int)Scale], new Vector2(0, 20), Color.Red);
+                Batch.DrawString(Font, "Gradient " + Gradient[ms.X / (int)Scale, ms.Y / (int)Scale], new Vector2(0, 40), Color.Red);
             }
 
-            Batch.DrawString(Font, "Total Water " + totalWater, new Vector2(0, 70), Color.White);
+            Batch.DrawString(Font, "Total Water " + TotalWater, new Vector2(0, 70), Color.Red);
 
             Batch.End();
 
