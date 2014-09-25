@@ -99,6 +99,13 @@ namespace FlowFields
             return output;
         }
 
+        public static Field CreateBoundary(Field input)
+        {
+            Field output = new Field(input.Width, input.Height);
+
+            return output;
+        }
+
         public static Field CreateCentralDepression(Field input)
         {
             Field output = new Field(input.Width, input.Height);
